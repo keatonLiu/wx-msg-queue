@@ -1,0 +1,7 @@
+services:
+  proxy-server:
+    image: registry.cn-hangzhou.aliyuncs.com/lxtxiaotong/proxy-server:latest
+    container_name: proxy-server
+    ports:
+      - "5200:8000"
+    restart: unless-stopped
