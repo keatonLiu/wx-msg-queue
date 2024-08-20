@@ -10,11 +10,6 @@ from starlette.requests import Request
 from model.WxPusher import WxPusher
 from settings import SEND_DELAY
 
-app = FastAPI()
-main_queue = asyncio.Queue()
-msg_queue_map = {}
-pusher = WxPusher()
-
 handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
@@ -22,6 +17,20 @@ handler.setFormatter(formatter)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
+
+main_queue = asyncio.Queue()
+msg_queue_map = {}
+pusher = WxPusher()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # start background task
+    await asyncio.create_task(process_queue())
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/msg")
@@ -49,13 +58,6 @@ async def process_queue():
         await msg_queue_map[msg_id].put(response)
 
         await asyncio.sleep(SEND_DELAY)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # start background task
-    await asyncio.create_task(process_queue())
-    yield
 
 
 if __name__ == '__main__':
