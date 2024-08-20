@@ -52,7 +52,7 @@ async def process_queue():
 
 
 @asynccontextmanager
-async def lifespan():
+async def lifespan(app: FastAPI):
     # start background task
     await asyncio.create_task(process_queue())
     yield
