@@ -1,7 +1,7 @@
 services:
   proxy-server:
-    image: registry.cn-hangzhou.aliyuncs.com/lxtxiaotong/proxy-server:latest
-    container_name: proxy-server
+    image: registry.cn-hangzhou.aliyuncs.com/lxtxiaotong/wx-msg-queue:latest
+    container_name: wx-msg-queue
     ports:
       - "5200:8000"
     restart: unless-stopped
