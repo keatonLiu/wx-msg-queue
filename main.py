@@ -1,10 +1,8 @@
 import asyncio
 import uuid
 from asyncio import Queue
-from dataclasses import field
 
 from fastapi import FastAPI
-from pydantic import BaseModel
 from starlette.requests import Request
 
 from model.WxPusher import WxPusher
