@@ -26,7 +26,7 @@ pusher = WxPusher()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # start background task
-    await asyncio.create_task(process_queue())
+    _ = asyncio.create_task(process_queue())
     yield
 
 
