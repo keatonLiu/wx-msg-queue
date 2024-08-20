@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from asyncio import Queue
 from contextlib import asynccontextmanager
@@ -13,6 +14,14 @@ app = FastAPI()
 main_queue = asyncio.Queue()
 msg_queue_map = {}
 pusher = WxPusher()
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+handler.setFormatter(formatter)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(handler)
 
 
 @app.post("/msg")
@@ -29,15 +38,15 @@ async def forward_msg(request: Request):
 
 
 async def process_queue():
+    logger.info("Start processing queue")
     while True:
-        if not main_queue.empty():
-            msg_id, message = await main_queue.get()
-            try:
-                # 向后端服务器发送请求
-                response = await pusher.send(message)
-            except Exception as e:
-                response = {"error": str(e)}
-            await msg_queue_map[msg_id].put(response)
+        msg_id, message = await main_queue.get()
+        try:
+            # 向后端服务器发送请求
+            response = await pusher.send(message)
+        except Exception as e:
+            response = {"error": str(e)}
+        await msg_queue_map[msg_id].put(response)
 
         await asyncio.sleep(SEND_DELAY)
 
@@ -51,4 +60,5 @@ async def lifespan():
 
 if __name__ == '__main__':
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
