@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from asyncio import Queue
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from starlette.requests import Request
@@ -41,10 +42,11 @@ async def process_queue():
         await asyncio.sleep(SEND_DELAY)
 
 
-@app.on_event("startup")
-async def startup_event():
-    # 启动消息处理任务
+@asynccontextmanager
+async def lifespan():
+    # start background task
     await asyncio.create_task(process_queue())
+    yield
 
 
 if __name__ == '__main__':
