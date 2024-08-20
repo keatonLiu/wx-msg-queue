@@ -5,6 +5,7 @@ from dataclasses import field
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+from starlette.requests import Request
 
 from model.WxPusher import WxPusher
 from settings import SEND_DELAY
@@ -15,35 +16,29 @@ msg_queue_map = {}
 pusher = WxPusher()
 
 
-class Msg(BaseModel):
-    id: str = field(default_factory=lambda: uuid.uuid4().hex)
-    content: str
-    content_type: int = 2
-    url: str = None
-    summary: str = None
-
-
 @app.post("/msg")
-async def forward_msg(msg: Msg):
-    msg_queue_map[msg.id] = Queue(maxsize=1)
+async def forward_msg(request: Request):
+    data = await request.json()
+    msg_id = uuid.uuid4().hex
+    msg_queue_map[msg_id] = Queue(maxsize=1)
     # 将消息和请求者URL加入队列
-    await main_queue.put((msg.id, msg))
+    await main_queue.put((msg_id, data))
     # 阻塞等待响应返回
-    response = await msg_queue_map[msg.id].get()
-    del msg_queue_map[msg.id]
+    response = await msg_queue_map[msg_id].get()
+    del msg_queue_map[msg_id]
     return response
 
 
 async def process_queue():
     while True:
         if not main_queue.empty():
-            message_id, message = await main_queue.get()
+            msg_id, message = await main_queue.get()
             try:
                 # 向后端服务器发送请求
-                response = await pusher.send(message.content, message.content_type, message.url, message.summary)
+                response = await pusher.send(message)
             except Exception as e:
                 response = {"error": str(e)}
-            await msg_queue_map[message_id].put(response)
+            await msg_queue_map[msg_id].put(response)
 
         await asyncio.sleep(SEND_DELAY)
 
