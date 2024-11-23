@@ -3,20 +3,19 @@ import logging
 import uuid
 from asyncio import Queue
 from contextlib import asynccontextmanager
-
+from uvicorn.config import LOGGING_CONFIG
 from fastapi import FastAPI
 from starlette.requests import Request
 
 from model.WxPusher import WxPusher
 from settings import SEND_DELAY
 
-handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-handler.setFormatter(formatter)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(handler)
+logger = logging.getLogger("uvicorn")
+format_str = '%(asctime)s [%(levelname)s] %(message)s'
+formatter = logging.Formatter(format_str)
+LOGGING_CONFIG["formatters"]["default"]["fmt"] = format_str
+LOGGING_CONFIG["formatters"]["access"][
+    "fmt"] = '%(asctime)s [%(levelname)s] %(client_addr)s - "%(request_line)s" %(status_code)s'
 
 main_queue = asyncio.Queue()
 msg_queue_map = {}
