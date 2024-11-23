@@ -1,7 +1,10 @@
 import asyncio
 import logging
+import time
+import traceback
 import uuid
 from asyncio import Queue
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from uvicorn.config import LOGGING_CONFIG
 from fastapi import FastAPI
@@ -17,15 +20,15 @@ LOGGING_CONFIG["formatters"]["default"]["fmt"] = format_str
 LOGGING_CONFIG["formatters"]["access"][
     "fmt"] = '%(asctime)s [%(levelname)s] %(client_addr)s - "%(request_line)s" %(status_code)s'
 
-main_queue = asyncio.Queue()
-msg_queue_map = {}
+main_queue = Queue()
+msg_queue_map = defaultdict(lambda: Queue(maxsize=1))
 pusher = WxPusher()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # start background task
-    _ = asyncio.create_task(process_queue())
+    _ = asyncio.create_task(msg_consume())
     yield
 
 
@@ -36,7 +39,6 @@ app = FastAPI(lifespan=lifespan)
 async def forward_msg(request: Request):
     data = await request.json()
     msg_id = uuid.uuid4().hex
-    msg_queue_map[msg_id] = Queue(maxsize=1)
     # 将消息和请求者URL加入队列
     await main_queue.put((msg_id, data))
     # 阻塞等待响应返回
@@ -45,21 +47,23 @@ async def forward_msg(request: Request):
     return response
 
 
-async def process_queue():
-    logger.info("Start processing queue")
+async def msg_consume():
+    logger.info("Start msg consume")
+    start = 0
     while True:
         msg_id, message = await main_queue.get()
+        if (remain := SEND_DELAY - (time.time() - start)) > 0:
+            await asyncio.sleep(remain)
+        start = time.time()
         try:
             # 向后端服务器发送请求
             response = await pusher.send(message)
         except Exception as e:
-            response = {"error": str(e)}
+            response = {"code": -1, "error": str(e)}
+            logger.error(traceback.format_exc())
         await msg_queue_map[msg_id].put(response)
-
-        await asyncio.sleep(SEND_DELAY)
 
 
 if __name__ == '__main__':
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
