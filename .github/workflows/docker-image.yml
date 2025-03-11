@@ -13,7 +13,7 @@ env:
   DOCKER_REGISTRY: registry.cn-hangzhou.aliyuncs.com
   SOURCE_COMPOSE_FILE: compose.yaml
   DEST_COMPOSE_DIR: "~/wx-msg-queue"
-  HOST: api.wd.hitbing.asia
+  HOST: api.vd.hitbing.asia
 
 jobs:
   publish:
