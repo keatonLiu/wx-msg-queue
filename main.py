@@ -2,9 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
-import uuid
 from asyncio import Queue
-from collections import defaultdict
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -29,7 +27,7 @@ pusher = WxPusher()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # start background task
-    _ = asyncio.create_task(msg_consume())
+    _ = asyncio.create_task(consumer())
     yield
 
 
@@ -37,7 +35,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/msg")
-async def forward_msg(request: Request):
+async def producer(request: Request):
     data = await request.json()
     await main_queue.put(data)
     return {"code": 0, "msg": "ok", "data": {
@@ -45,7 +43,7 @@ async def forward_msg(request: Request):
     }}
 
 
-async def msg_consume():
+async def consumer():
     logger.info("Start msg consume")
     start = 0
     while True:
