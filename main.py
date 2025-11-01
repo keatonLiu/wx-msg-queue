@@ -53,7 +53,6 @@ async def consumer():
         start = time.time()
         try:
             # 向后端服务器发送请求
-            logger.info(f"Send msg consume: {message}")
             response = await pusher.send(message)
             logger.info(f"Send msg consume response: {response}")
         except Exception as e:  # noqa
